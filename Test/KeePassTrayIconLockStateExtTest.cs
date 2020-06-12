@@ -1,5 +1,6 @@
 ﻿#nullable enable
 
+using System;
 using System.Drawing;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -15,14 +16,13 @@ namespace Test {
 
     public class KeePassTrayIconLockStateExtTest {
 
-        private const int LOAD_DELAY = 80;
-
-        private readonly KeePassTrayIconLockStateExt extension = new KeePassTrayIconLockStateExt();
+        private readonly KeePassTrayIconLockStateExt plugin = new KeePassTrayIconLockStateExt();
 
         private readonly IPluginHost keePassHost;
         private readonly MainForm mainWindow;
         private readonly NotifyIcon mainNotifyIcon;
 
+        private readonly TimeSpan loadDelay = TimeSpan.FromMilliseconds(40 * 2);
         private readonly Icon smallLockedIcon = AppIcons.Get(AppIconType.QuadLocked, UIUtil.GetSmallIconSize(), Color.Empty);
         private readonly Icon smallUnlockedIcon = AppIcons.Get(AppIconType.QuadNormal, UIUtil.GetSmallIconSize(), Color.Empty);
 
@@ -40,19 +40,19 @@ namespace Test {
 
         [Fact]
         public async void renderBrieflyAfterLoad() {
-            extension.Initialize(keePassHost);
+            plugin.Initialize(keePassHost);
 
             Mock.AssertSet(() => mainNotifyIcon.Icon = smallLockedIcon, Occurs.Never());
 
-            await Task.Delay(LOAD_DELAY);
+            await Task.Delay(loadDelay);
 
             Mock.AssertSet(() => mainNotifyIcon.Icon = smallLockedIcon, Occurs.Once());
         }
 
         [Fact]
         public async void unlockAfterOpeningFile() {
-            extension.Initialize(keePassHost);
-            await Task.Delay(LOAD_DELAY);
+            plugin.Initialize(keePassHost);
+            await Task.Delay(loadDelay);
 
             Mock.Raise(() => mainWindow.FileOpened += null, new FileOpenedEventArgs(null));
 
@@ -61,8 +61,8 @@ namespace Test {
 
         [Fact]
         public async void lockAfterClosingFile() {
-            extension.Initialize(keePassHost);
-            await Task.Delay(LOAD_DELAY);
+            plugin.Initialize(keePassHost);
+            await Task.Delay(loadDelay);
 
             Mock.Raise(() => mainWindow.FileOpened += null, new FileOpenedEventArgs(null));
             Mock.Raise(() => mainWindow.FileClosed += null, new FileClosedEventArgs(null, FileEventFlags.Locking));
