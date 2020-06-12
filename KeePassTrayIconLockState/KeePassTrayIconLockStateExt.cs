@@ -31,7 +31,7 @@ namespace KeePassTrayIconLockState {
 
         private void renderTrayIcon() {
             AppIconType appIconType = isFileOpen.Value ? AppIconType.QuadNormal : AppIconType.QuadLocked;
-            Icon appIcon = AppIcons.Get(appIconType, UIUtil.GetSmallIconSize(), Color.Blue);
+            Icon appIcon = AppIcons.Get(appIconType, UIUtil.GetSmallIconSize(), Color.Empty);
             keePassHost.MainWindow.MainNotifyIcon.Icon = appIcon;
         }
 
