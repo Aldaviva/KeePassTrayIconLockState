@@ -43,7 +43,7 @@
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Xml" />
     <Reference Include="Telerik.JustMock">
-      <HintPath>..\..\..\..\..\..\Programs\Development\Progress\Telerik JustMock\Libraries\Telerik.JustMock.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\Programs\Development\JustMock\Libraries\Telerik.JustMock.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
