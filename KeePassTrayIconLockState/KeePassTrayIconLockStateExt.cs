@@ -17,12 +17,15 @@ namespace KeePassTrayIconLockState {
     // ReSharper disable once UnusedType.Global
     public class KeePassTrayIconLockStateExt: Plugin, IDisposable {
 
-        private readonly TimeSpan                             startupDelay         = TimeSpan.FromMilliseconds(60);
+        internal static readonly TimeSpan STARTUP_DURATION = TimeSpan.FromMilliseconds(2000);
+        internal static readonly TimeSpan ANIMATION_PERIOD = TimeSpan.FromMilliseconds(700);
+
         private readonly IDictionary<DatabaseOpenState, Icon> iconsByFileOpenState = new Dictionary<DatabaseOpenState, Icon>();
         private readonly StoredProperty<bool>                 isDatabaseOpen       = new StoredProperty<bool>(false);
 
-        private IPluginHost keePassHost = null!;
-        private Timer?      animationTimer;
+        private IPluginHost        keePassHost = null!;
+        private Timer?             animationTimer;
+        private Property<TrayIcon> trayIcon = null!;
 
         public KeePassTrayIconLockStateExt() {
             Icon lockedIcon   = loadIcon(false);
@@ -50,11 +53,11 @@ namespace KeePassTrayIconLockState {
                 }
             });
 
-            Property<TrayIcon> trayIcon = DerivedProperty<TrayIcon>.Create(databaseOpenState, isOpen => new TrayIcon(iconsByFileOpenState[isOpen], isOpen != DatabaseOpenState.CLOSED));
+            trayIcon = DerivedProperty<TrayIcon>.Create(databaseOpenState, isOpen => new TrayIcon(iconsByFileOpenState[isOpen], isOpen != DatabaseOpenState.CLOSED));
 
-            trayIcon.PropertyChanged += (sender, args) => renderTrayIcon(args.NewValue);
+            trayIcon.PropertyChanged += (sender, args) => renderTrayIcon();
 
-            animationTimer = new Timer { Enabled = false, Interval = 600 };
+            animationTimer = new Timer { Enabled = false, Interval = (int) ANIMATION_PERIOD.TotalMilliseconds };
             bool animationShowClosedIcon = false;
             animationTimer.Tick += delegate {
                 keePassHost.MainWindow.MainNotifyIcon.Icon =  iconsByFileOpenState[animationShowClosedIcon ? DatabaseOpenState.CLOSED : DatabaseOpenState.OPEN];
@@ -66,8 +69,11 @@ namespace KeePassTrayIconLockState {
                 animationTimer.Enabled  = args.NewValue == DatabaseOpenState.OPENING;
             };
 
-            Task.Delay(startupDelay)
-                .ContinueWith(_ => renderTrayIcon(trayIcon.Value)); // Give KeePass time to stop setting its own icon
+            // Give KeePass time to stop setting its own icon
+            Timer startupTimer = new Timer { Enabled = true, Interval = 8 };
+            startupTimer.Tick += delegate { renderTrayIcon(); };
+            Task.Delay(STARTUP_DURATION).ContinueWith(task => startupTimer.Stop());
+            renderTrayIcon();
 
             return true;
         }
@@ -77,7 +83,8 @@ namespace KeePassTrayIconLockState {
             return AppIcons.Get(appIconType, UIUtil.GetSmallIconSize(), Color.Empty);
         }
 
-        private void renderTrayIcon(TrayIcon icon) {
+        private void renderTrayIcon() {
+            TrayIcon icon = trayIcon.Value;
             keePassHost.MainWindow.MainNotifyIcon.Icon    = icon.image;
             keePassHost.MainWindow.MainNotifyIcon.Visible = icon.isVisible;
         }

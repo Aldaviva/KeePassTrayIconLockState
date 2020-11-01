@@ -17,7 +17,7 @@ using Xunit;
 
 namespace Test {
 
-    public class KeePassTrayIconLockStateExtTest {
+    public class KeePassTrayIconLockStateExtTest: IDisposable {
 
         private readonly KeePassTrayIconLockStateExt plugin = new KeePassTrayIconLockStateExt();
 
@@ -26,9 +26,14 @@ namespace Test {
         private readonly NotifyIcon           mainNotifyIcon;
         private readonly ToolStripStatusLabel statusPartInfo;
 
-        private readonly TimeSpan loadDelay         = TimeSpan.FromMilliseconds(50 * 2);
+        private readonly TimeSpan loadDelay         = TimeSpan.FromTicks(KeePassTrayIconLockStateExt.STARTUP_DURATION.Ticks * 2);
+        private readonly TimeSpan animationDelay    = KeePassTrayIconLockStateExt.ANIMATION_PERIOD;
         private readonly Icon     smallLockedIcon   = AppIcons.Get(AppIconType.QuadLocked, UIUtil.GetSmallIconSize(), Color.Empty);
         private readonly Icon     smallUnlockedIcon = AppIcons.Get(AppIconType.QuadNormal, UIUtil.GetSmallIconSize(), Color.Empty);
+
+        public void Dispose() {
+            plugin.Dispose();
+        }
 
         public KeePassTrayIconLockStateExtTest() {
             Assert.True(Mock.IsProfilerEnabled, "These tests require the JustMock Profiler to be enabled because the " +
@@ -64,14 +69,32 @@ namespace Test {
         }
 
         [Fact]
-        public async void showWhileDecrypting() {
+        public async void animateWhileDecrypting() {
             plugin.Initialize(keePassHost);
             await Task.Delay(loadDelay);
+            Mock.AssertSet(() => mainNotifyIcon.Icon    = smallLockedIcon, Occurs.Once(), "icon should start locked");
+            Mock.AssertSet(() => mainNotifyIcon.Visible = false, Occurs.Once(), "icon should start invisible");
 
             statusPartInfo.Text = "Opening database...";
 
-            Mock.AssertSet(() => mainNotifyIcon.Icon    = smallLockedIcon, Occurs.Exactly(2));
-            Mock.AssertSet(() => mainNotifyIcon.Visible = true, Occurs.Once());
+            await Task.Delay((int) (animationDelay.TotalMilliseconds / 2));
+
+            Mock.AssertSet(() => mainNotifyIcon.Icon    = smallUnlockedIcon, Occurs.Once(), "immediately after opening, icon should be unlocked");
+            Mock.AssertSet(() => mainNotifyIcon.Visible = true, Occurs.Once(), "immediately after opening, icon should be visible");
+
+            await Task.Delay(animationDelay);
+
+            Mock.AssertSet(() => mainNotifyIcon.Icon = smallLockedIcon, Occurs.Exactly(2));
+
+            await Task.Delay(animationDelay);
+
+            Mock.AssertSet(() => mainNotifyIcon.Icon = smallUnlockedIcon, Occurs.Exactly(2));
+
+            await Task.Delay(animationDelay);
+
+            Mock.AssertSet(() => mainNotifyIcon.Icon = smallLockedIcon, Occurs.Exactly(3));
+
+            Mock.AssertSet(() => mainNotifyIcon.Visible = false, Occurs.Never());
         }
 
         [Fact]
