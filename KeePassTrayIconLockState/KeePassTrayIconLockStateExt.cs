@@ -6,70 +6,80 @@ using System.Drawing;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using KeePass.App;
 using KeePass.Plugins;
 using KeePass.Resources;
-using KeePass.UI;
 using KoKo.Property;
 
 namespace KeePassTrayIconLockState {
 
     // ReSharper disable once UnusedType.Global
-    public class KeePassTrayIconLockStateExt: Plugin, IDisposable {
+    public class KeePassTrayIconLockStateExt: Plugin {
 
         internal static readonly TimeSpan STARTUP_DURATION = TimeSpan.FromMilliseconds(2000);
-        internal static readonly TimeSpan ANIMATION_PERIOD = TimeSpan.FromMilliseconds(700);
 
         private readonly IDictionary<DatabaseOpenState, Icon> iconsByFileOpenState = new Dictionary<DatabaseOpenState, Icon>();
-        private readonly StoredProperty<bool>                 isDatabaseOpen       = new StoredProperty<bool>(false);
+        private readonly StoredProperty<DatabaseOpenState>    databaseOpenState    = new StoredProperty<DatabaseOpenState>(DatabaseOpenState.CLOSED);
 
         private IPluginHost        keePassHost = null!;
-        private Timer?             animationTimer;
-        private Property<TrayIcon> trayIcon = null!;
+        private Property<TrayIcon> trayIcon    = null!;
 
         public KeePassTrayIconLockStateExt() {
-            Icon lockedIcon   = loadIcon(false);
-            Icon unlockedIcon = loadIcon(true);
-
-            iconsByFileOpenState.Add(DatabaseOpenState.CLOSED, lockedIcon);
-            iconsByFileOpenState.Add(DatabaseOpenState.OPENING, lockedIcon);
-            iconsByFileOpenState.Add(DatabaseOpenState.OPEN, unlockedIcon);
+            iconsByFileOpenState.Add(DatabaseOpenState.CLOSED, Resources.locked);
+            iconsByFileOpenState.Add(DatabaseOpenState.OPENING, Resources.unlocking);
+            iconsByFileOpenState.Add(DatabaseOpenState.OPEN, Resources.unlocked);
         }
 
         public override bool Initialize(IPluginHost host) {
             keePassHost = host;
 
-            keePassHost.MainWindow.FileOpened += delegate { isDatabaseOpen.Value = true; };
-            keePassHost.MainWindow.FileClosed += delegate { isDatabaseOpen.Value = false; };
+            keePassHost.MainWindow.FileOpened += delegate { databaseOpenState.Value = DatabaseOpenState.OPEN; };
+            keePassHost.MainWindow.FileClosed += delegate { databaseOpenState.Value = DatabaseOpenState.CLOSED; };
 
-            ToolStripItem    statusBarInfo = keePassHost.MainWindow.Controls.OfType<StatusStrip>().First().Items[1];
-            Property<string> statusBarText = new NativeReadableProperty<string>(statusBarInfo, nameof(ToolStripItem.Text), nameof(ToolStripItem.TextChanged));
+            ToolStripItemCollection statusBarItems       = keePassHost.MainWindow.Controls.OfType<StatusStrip>().First().Items;
+            ToolStripItem           statusBarInfo        = statusBarItems[1];
+            ToolStripItem           progressBar          = statusBarItems[2];
+            Property<string>        statusBarText        = new NativeReadableProperty<string>(statusBarInfo, nameof(ToolStripItem.Text), nameof(ToolStripItem.TextChanged));
+            Property<bool>          isProgressBarVisible = new NativeReadableProperty<bool>(progressBar, nameof(ToolStripItem.Visible), nameof(ToolStripItem.VisibleChanged));
 
-            Property<DatabaseOpenState> databaseOpenState = DerivedProperty<DatabaseOpenState>.Create(isDatabaseOpen, statusBarText, (isOpen, statusText) => {
-                if (statusText == KPRes.OpeningDatabase2) {
-                    return DatabaseOpenState.OPENING;
-                } else {
-                    return isOpen ? DatabaseOpenState.OPEN : DatabaseOpenState.CLOSED;
+            statusBarText.PropertyChanged += (sender, args) => {
+                if (args.NewValue == KPRes.OpeningDatabase2) {
+                    /*
+                     * When the status bar text changes to "Opening database...", set the db open state to OPENING.
+                     */
+                    databaseOpenState.Value = DatabaseOpenState.OPENING;
                 }
-            });
+            };
 
-            trayIcon = DerivedProperty<TrayIcon>.Create(databaseOpenState, isOpen => new TrayIcon(iconsByFileOpenState[isOpen], isOpen != DatabaseOpenState.CLOSED));
+            isProgressBarVisible.PropertyChanged += (sender, args) => {
+                if (!args.NewValue && databaseOpenState.Value == DatabaseOpenState.OPENING) {
+                    /*
+                     * When the database is being opened and the progress bar gets hidden, it means the database was finished being decrypted, but was it successful or unsuccessful?
+                     * Sadly there is no good way to tell, so instead we wait 100 ms for the FileOpen event to be fired.
+                     * If it is fired, the db open state moves from OPENING to OPEN.
+                     * Otherwise, assume that the database failed to decrypt and set the db open state to CLOSED.
+                     */
+                    Task.Delay(100).ContinueWith(task => {
+                        if (databaseOpenState.Value == DatabaseOpenState.OPENING) { // failed to decrypt, otherwise this would have been set to OPEN by the FileOpen event above.
+                            databaseOpenState.Value = DatabaseOpenState.CLOSED;
+                        }
+                    });
+
+                } else if (args.NewValue && databaseOpenState.Value == DatabaseOpenState.CLOSED && statusBarText.Value == KPRes.OpeningDatabase2) {
+                    /*
+                     * When the database is closed and the status bar says "Opening database..." and the progress bar is shown, it means the user already failed the previous decryption attempt
+                     * and is retrying after submitting another password, so set the db opening state to OPENING.
+                     */
+                    databaseOpenState.Value = DatabaseOpenState.OPENING;
+                }
+            };
+
+            trayIcon = DerivedProperty<TrayIcon>.Create(databaseOpenState, openState => new TrayIcon(iconsByFileOpenState[openState], openState != DatabaseOpenState.CLOSED));
 
             trayIcon.PropertyChanged += (sender, args) => renderTrayIcon();
 
-            animationTimer = new Timer { Enabled = false, Interval = (int) ANIMATION_PERIOD.TotalMilliseconds };
-            bool animationShowClosedIcon = false;
-            animationTimer.Tick += delegate {
-                keePassHost.MainWindow.MainNotifyIcon.Icon =  iconsByFileOpenState[animationShowClosedIcon ? DatabaseOpenState.CLOSED : DatabaseOpenState.OPEN];
-                animationShowClosedIcon                    ^= true;
-            };
-
-            databaseOpenState.PropertyChanged += (sender, args) => {
-                animationShowClosedIcon = false;
-                animationTimer.Enabled  = args.NewValue == DatabaseOpenState.OPENING;
-            };
-
-            // Give KeePass time to stop setting its own icon
+            /*
+             * KeePass sets its own icon at some indeterminate time after startup, so repeatedly set our own icon every 8 ms for 2 seconds to make sure our icon isn't overridden.
+             */
             Timer startupTimer = new Timer { Enabled = true, Interval = 8 };
             startupTimer.Tick += delegate { renderTrayIcon(); };
             Task.Delay(STARTUP_DURATION).ContinueWith(task => startupTimer.Stop());
@@ -78,26 +88,15 @@ namespace KeePassTrayIconLockState {
             return true;
         }
 
-        private static Icon loadIcon(bool fileOpen) {
-            AppIconType appIconType = fileOpen ? AppIconType.QuadNormal : AppIconType.QuadLocked;
-            return AppIcons.Get(appIconType, UIUtil.GetSmallIconSize(), Color.Empty);
-        }
-
         private void renderTrayIcon() {
-            TrayIcon icon = trayIcon.Value;
-            keePassHost.MainWindow.MainNotifyIcon.Icon    = icon.image;
-            keePassHost.MainWindow.MainNotifyIcon.Visible = icon.isVisible;
+            TrayIcon   iconToRender = trayIcon.Value;
+            NotifyIcon keepassIcon  = keePassHost.MainWindow.MainNotifyIcon;
+
+            keepassIcon.Icon    = iconToRender.image;
+            keepassIcon.Visible = iconToRender.isVisible;
         }
 
-        public override Image SmallIcon => iconsByFileOpenState[DatabaseOpenState.CLOSED].ToBitmap();
-
-        public override void Terminate() {
-            Dispose();
-        }
-
-        public void Dispose() {
-            animationTimer?.Dispose();
-        }
+        public override Image SmallIcon => Resources.plugin_image;
 
     }
 

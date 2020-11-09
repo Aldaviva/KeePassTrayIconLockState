@@ -49,12 +49,35 @@
     <Compile Include="DatabaseOpenState.cs" />
     <Compile Include="KeePassTrayIconLockStateExt.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
     <Compile Include="TrayIcon.cs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="ILRepack.Lib.MSBuild.Task">
       <Version>2.0.18.1</Version>
     </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\locked.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\unlocked.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\unlocking.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\plugin image.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

@@ -4,20 +4,20 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using KeePass.App;
+using FluentAssertions;
 using KeePass.Forms;
 using KeePass.Plugins;
-using KeePass.UI;
 using KeePassTrayIconLockState;
 using Telerik.JustMock;
 using Xunit;
 
 namespace Test {
 
-    public class KeePassTrayIconLockStateExtTest: IDisposable {
+    public class KeePassTrayIconLockStateExtTest {
+
+        private static readonly ImageConverter IMAGE_CONVERTER = new ImageConverter();
 
         private readonly KeePassTrayIconLockStateExt plugin = new KeePassTrayIconLockStateExt();
 
@@ -26,14 +26,7 @@ namespace Test {
         private readonly NotifyIcon           mainNotifyIcon;
         private readonly ToolStripStatusLabel statusPartInfo;
 
-        private readonly TimeSpan loadDelay         = TimeSpan.FromTicks(KeePassTrayIconLockStateExt.STARTUP_DURATION.Ticks * 2);
-        private readonly TimeSpan animationDelay    = KeePassTrayIconLockStateExt.ANIMATION_PERIOD;
-        private readonly Icon     smallLockedIcon   = AppIcons.Get(AppIconType.QuadLocked, UIUtil.GetSmallIconSize(), Color.Empty);
-        private readonly Icon     smallUnlockedIcon = AppIcons.Get(AppIconType.QuadNormal, UIUtil.GetSmallIconSize(), Color.Empty);
-
-        public void Dispose() {
-            plugin.Dispose();
-        }
+        private readonly TimeSpan loadDelay = TimeSpan.FromTicks(KeePassTrayIconLockStateExt.STARTUP_DURATION.Ticks * 2);
 
         public KeePassTrayIconLockStateExtTest() {
             Assert.True(Mock.IsProfilerEnabled, "These tests require the JustMock Profiler to be enabled because the " +
@@ -41,7 +34,7 @@ namespace Test {
 
             keePassHost    = Mock.Create<IPluginHost>();
             mainWindow     = Mock.Create<MainForm>();
-            mainNotifyIcon = Mock.Create<NotifyIcon>();
+            mainNotifyIcon = new NotifyIcon();
 
             Control.ControlCollection mainWindowControls = Mock.Create<Control.ControlCollection>();
             StatusStrip               statusStrip        = new StatusStrip();
@@ -56,68 +49,57 @@ namespace Test {
         }
 
         [Fact]
-        public async void renderBrieflyAfterLoad() {
+        public void startup() {
             plugin.Initialize(keePassHost);
 
-            Mock.AssertSet(() => mainNotifyIcon.Icon    = smallLockedIcon, Occurs.Never());
-            Mock.AssertSet(() => mainNotifyIcon.Visible = false, Occurs.Never());
-
-            await Task.Delay(loadDelay);
-
-            Mock.AssertSet(() => mainNotifyIcon.Icon    = smallLockedIcon, Occurs.Once());
-            Mock.AssertSet(() => mainNotifyIcon.Visible = false, Occurs.Once());
+            mainNotifyIcon.Visible.Should().BeFalse();
+            assertIconsEqual(mainNotifyIcon.Icon, Resources.locked);
         }
 
         [Fact]
-        public async void animateWhileDecrypting() {
+        public async void decrypting() {
             plugin.Initialize(keePassHost);
             await Task.Delay(loadDelay);
-            Mock.AssertSet(() => mainNotifyIcon.Icon    = smallLockedIcon, Occurs.Once(), "icon should start locked");
-            Mock.AssertSet(() => mainNotifyIcon.Visible = false, Occurs.Once(), "icon should start invisible");
 
             statusPartInfo.Text = "Opening database...";
 
-            await Task.Delay((int) (animationDelay.TotalMilliseconds / 2));
-
-            Mock.AssertSet(() => mainNotifyIcon.Icon    = smallUnlockedIcon, Occurs.Once(), "immediately after opening, icon should be unlocked");
-            Mock.AssertSet(() => mainNotifyIcon.Visible = true, Occurs.Once(), "immediately after opening, icon should be visible");
-
-            await Task.Delay(animationDelay);
-
-            Mock.AssertSet(() => mainNotifyIcon.Icon = smallLockedIcon, Occurs.Exactly(2));
-
-            await Task.Delay(animationDelay);
-
-            Mock.AssertSet(() => mainNotifyIcon.Icon = smallUnlockedIcon, Occurs.Exactly(2));
-
-            await Task.Delay(animationDelay);
-
-            Mock.AssertSet(() => mainNotifyIcon.Icon = smallLockedIcon, Occurs.Exactly(3));
-
-            Mock.AssertSet(() => mainNotifyIcon.Visible = false, Occurs.Never());
+            mainNotifyIcon.Visible.Should().BeTrue();
+            assertIconsEqual(mainNotifyIcon.Icon, Resources.unlocking);
         }
 
         [Fact]
-        public async void unlockAfterOpeningFile() {
+        public async void unlocked() {
             plugin.Initialize(keePassHost);
             await Task.Delay(loadDelay);
 
             Mock.Raise(() => mainWindow.FileOpened += null, new FileOpenedEventArgs(null));
 
-            Mock.AssertSet(() => mainNotifyIcon.Icon    = smallUnlockedIcon, Occurs.Once());
-            Mock.AssertSet(() => mainNotifyIcon.Visible = true, Occurs.Once());
+            mainNotifyIcon.Visible.Should().BeTrue();
+            assertIconsEqual(mainNotifyIcon.Icon, Resources.unlocked);
         }
 
         [Fact]
-        public async void lockAfterClosingFile() {
+        public async void locked() {
             plugin.Initialize(keePassHost);
             await Task.Delay(loadDelay);
 
             Mock.Raise(() => mainWindow.FileOpened += null, new FileOpenedEventArgs(null));
             Mock.Raise(() => mainWindow.FileClosed += null, new FileClosedEventArgs(null, FileEventFlags.Locking));
 
-            Mock.AssertSet(() => mainNotifyIcon.Icon    = smallLockedIcon, Occurs.Exactly(2));
-            Mock.AssertSet(() => mainNotifyIcon.Visible = false, Occurs.Exactly(2));
+            mainNotifyIcon.Visible.Should().BeFalse();
+            assertIconsEqual(mainNotifyIcon.Icon, Resources.locked);
+        }
+
+        internal static void assertIconsEqual(Icon actual, Icon expected) {
+            getIconBytes(actual.ToBitmap()).Should().Equal(getIconBytes(expected.ToBitmap()));
+        }
+
+        internal static void assertIconsEqual(Image actual, Icon expected) {
+            getIconBytes(actual).Should().Equal(getIconBytes(expected.ToBitmap()));
+        }
+
+        private static IEnumerable<byte>? getIconBytes(Image image) {
+            return (byte[]?) IMAGE_CONVERTER.ConvertTo(image, typeof(byte[]));
         }
 
     }

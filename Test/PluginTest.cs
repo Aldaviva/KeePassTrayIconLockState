@@ -1,12 +1,9 @@
 ﻿#nullable enable
 
 using System.Diagnostics;
-using System.Drawing;
 using System.IO;
 using FluentAssertions;
-using KeePass.App;
 using KeePass.Plugins;
-using KeePass.UI;
 using KeePassTrayIconLockState;
 using Xunit;
 
@@ -16,7 +13,6 @@ namespace Test {
 
         private readonly KeePassTrayIconLockStateExt plugin = new KeePassTrayIconLockStateExt();
 
-        private readonly Icon smallLockedIcon = AppIcons.Get(AppIconType.QuadLocked, UIUtil.GetSmallIconSize(), Color.Empty);
 
         [Fact]
         public void derivesFromPluginSuperclass() {
@@ -49,10 +45,7 @@ namespace Test {
 
         [Fact]
         public void pluginIcon() {
-            var imageConverter = new ImageConverter();
-            var actual = (byte[]) imageConverter.ConvertTo(plugin.SmallIcon, typeof(byte[]));
-            var expected = (byte[]) imageConverter.ConvertTo(smallLockedIcon.ToBitmap(), typeof(byte[]));
-            actual.Should().Equal(expected);
+            KeePassTrayIconLockStateExtTest.assertIconsEqual(plugin.SmallIcon, Resources.locked);
         }
 
     }
