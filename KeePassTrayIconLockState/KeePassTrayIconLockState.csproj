@@ -12,6 +12,7 @@
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
+    <NoWarn>8524;8509</NoWarn>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -58,7 +59,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="ILRepack.Lib.MSBuild.Task">
-      <Version>2.0.18.1</Version>
+      <Version>2.0.18.2</Version>
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
@@ -78,6 +79,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\plugin image.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="version.txt" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
