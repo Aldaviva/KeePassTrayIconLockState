@@ -17,9 +17,9 @@ Replace the KeePass tray icon with a white wireframe style to match Windows 10, 
 
 ## Behavior
 <dl>
-<dt>Database is open</dt>
+<dt><img src="https://raw.githubusercontent.com/Aldaviva/KeePassTrayIconLockState/master/KeePassTrayIconLockState/Resources/unlocked.ico" /> Database is open</dt>
 <dd>The tray icon is a white wireframe padlock icon that matches the visual style of Windows 10's built-in tray icons.</dd>
-<dt>Database is being loaded and decrypted</dt>
+<dt><img src="https://raw.githubusercontent.com/Aldaviva/KeePassTrayIconLockState/master/KeePassTrayIconLockState/Resources/unlocking.ico" /> Database is being loaded and decrypted</dt>
 <dd>A small hourglass is added to the padlock tray icon until the database is finished opening.</dd>
 <dt>Database is locked or closed</dt>
 <dd>Tray icon is removed. To interact with KeePass in this state, launch the program again or use a system-wide KeePass hotkey to open its window or perform auto-type (set in Tools → Options → Integrations).</dd>
