@@ -1,11 +1,9 @@
-﻿namespace KeePassTrayIconLockState {
+﻿namespace KeePassTrayIconLockState; 
 
-    internal enum DatabaseOpenState {
+internal enum DatabaseOpenState {
 
-        CLOSED,
-        OPENING,
-        OPEN
-
-    }
+    CLOSED,
+    OPENING,
+    OPEN
 
 }

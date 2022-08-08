@@ -34,12 +34,15 @@
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="DarkNet">
+      <HintPath>..\..\darknet\darknet\bin\Debug\net452\DarkNet.dll</HintPath>
+    </Reference>
     <Reference Include="KeePass">
       <HintPath>..\..\..\..\..\..\Programs\Security\KeePass\KeePass.exe</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="KoKo">
-      <HintPath>..\..\KoKo\KoKo\bin\Release\net45\KoKo.dll</HintPath>
+      <HintPath>..\..\KoKo\KoKo\bin\Release\net452\KoKo.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -82,6 +85,12 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="version.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\unlocked-light.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\unlocking-light.ico" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
