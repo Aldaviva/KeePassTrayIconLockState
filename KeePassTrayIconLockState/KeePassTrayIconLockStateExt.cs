@@ -1,8 +1,11 @@
 ﻿#nullable enable
 
 using System;
+using System.Collections.Generic;
 using System.Drawing;
+using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Dark.Net;
@@ -15,7 +18,9 @@ namespace KeePassTrayIconLockState;
 // ReSharper disable once UnusedType.Global
 public class KeePassTrayIconLockStateExt: Plugin {
 
-    internal static readonly TimeSpan STARTUP_DURATION = TimeSpan.FromMilliseconds(2000);
+    internal static readonly TimeSpan                   STARTUP_DURATION              = TimeSpan.FromMilliseconds(2000);
+    private static readonly  string                     PLUGIN_INSTALLATION_DIRECTORY = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!;
+    private static readonly  IDictionary<string, Icon?> EXTERNAL_ICON_CACHE           = new Dictionary<string, Icon?>(6);
 
     private readonly StoredProperty<DatabaseOpenState> databaseOpenState = new();
     private readonly IDarkNet                          darkNet           = new DarkNet();
@@ -99,16 +104,31 @@ public class KeePassTrayIconLockStateExt: Plugin {
 
     private static Icon getIcon(DatabaseOpenState databaseOpenState, bool isDarkTheme) {
         Icon iconResource = databaseOpenState switch {
-            DatabaseOpenState.CLOSED when isDarkTheme  => Resources.locked,
-            DatabaseOpenState.CLOSED                   => Resources.locked,
-            DatabaseOpenState.OPENING when isDarkTheme => Resources.unlocking,
-            DatabaseOpenState.OPENING                  => Resources.unlocking_light,
-            DatabaseOpenState.OPEN when isDarkTheme    => Resources.unlocked,
-            DatabaseOpenState.OPEN                     => Resources.unlocked_light,
-            _                                          => throw new ArgumentOutOfRangeException(nameof(databaseOpenState), databaseOpenState, nameof(getIcon))
+            DatabaseOpenState.CLOSED when isDarkTheme  => getExternalCustomIcon("closed-darktaskbar.ico") ?? Resources.locked,
+            DatabaseOpenState.CLOSED                   => getExternalCustomIcon("closed-lighttaskbar.ico") ?? Resources.locked,
+            DatabaseOpenState.OPENING when isDarkTheme => getExternalCustomIcon("opening-darktaskbar.ico") ?? Resources.unlocking,
+            DatabaseOpenState.OPENING                  => getExternalCustomIcon("opening-lighttaskbar.ico") ?? Resources.unlocking_light,
+            DatabaseOpenState.OPEN when isDarkTheme    => getExternalCustomIcon("open-darktaskbar.ico") ?? Resources.unlocked,
+            DatabaseOpenState.OPEN                     => getExternalCustomIcon("open-lighttaskbar.ico") ?? Resources.unlocked_light
         };
         Icon sizedIconResource = new(iconResource, SystemInformation.SmallIconSize);
         return sizedIconResource;
+    }
+
+    private static Icon? getExternalCustomIcon(string filename) {
+        if (!EXTERNAL_ICON_CACHE.TryGetValue(filename, out Icon? icon)) {
+            try {
+                string customIconPath = Path.Combine(PLUGIN_INSTALLATION_DIRECTORY, filename);
+                icon = new Icon(customIconPath, SystemInformation.SmallIconSize);
+            } catch (FileNotFoundException) {
+                // add a null icon to the cache map, so that missing files don't result in disk I/O every time
+                icon = null;
+            }
+
+            EXTERNAL_ICON_CACHE.Add(filename, icon);
+        }
+
+        return icon;
     }
 
     public override void Terminate() {
