@@ -24,7 +24,7 @@ public class KeePassTrayIconLockStateExtElevatedTest {
             "MainForm class's constructor crashes if you just run it");
 
         keePassHost    = Mock.Create<IPluginHost>();
-        mainWindow     = Mock.Create<MainForm>();
+        mainWindow     = Mock.Create<MainForm>(Constructor.Mocked, Behavior.Strict);
         mainNotifyIcon = new NotifyIcon();
 
         Control.ControlCollection mainWindowControls = Mock.Create<Control.ControlCollection>();
@@ -52,7 +52,7 @@ public class KeePassTrayIconLockStateExtElevatedTest {
     [Fact]
     public void decrypting() {
         plugin.Initialize(keePassHost);
-        Thread.Sleep(loadDelay); // use Thread.Sleep() instead of await Task.Delay(), which apparently never halts when run in a mocking profiler chained to a coverage profiler
+        // Thread.Sleep(loadDelay); // using Thread.Sleep() instead of await Task.Delay(), which apparently never halts when run in a mocking profiler chained to a coverage profiler
 
         statusPartInfo.Text = "Opening database...";
 
@@ -63,7 +63,7 @@ public class KeePassTrayIconLockStateExtElevatedTest {
     [Fact]
     public void unlocked() {
         plugin.Initialize(keePassHost);
-        Thread.Sleep(loadDelay);
+        // Thread.Sleep(loadDelay);
 
         Mock.Raise(() => mainWindow.FileOpened += null, new FileOpenedEventArgs(null));
 
@@ -74,7 +74,7 @@ public class KeePassTrayIconLockStateExtElevatedTest {
     [Fact]
     public void locked() {
         plugin.Initialize(keePassHost);
-        Thread.Sleep(loadDelay);
+        // Thread.Sleep(loadDelay);
 
         Mock.Raise(() => mainWindow.FileOpened += null, new FileOpenedEventArgs(null));
         Mock.Raise(() => mainWindow.FileClosed += null, new FileClosedEventArgs(null, FileEventFlags.Locking));
