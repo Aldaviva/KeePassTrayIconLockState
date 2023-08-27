@@ -1,107 +1,52 @@
 ﻿#nullable enable
 
 using System;
-using System.Collections.Generic;
 using System.Drawing;
-using System.Linq;
-using System.Threading.Tasks;
+using System.IO;
 using System.Windows.Forms;
 using FluentAssertions;
-using KeePass.Forms;
-using KeePass.Plugins;
 using KeePassTrayIconLockState;
-using Telerik.JustMock;
 using Xunit;
 
-namespace Test {
+namespace Test;
 
-    public class KeePassTrayIconLockStateExtTest {
+public class KeePassTrayIconLockStateExtTest: IDisposable {
 
-        private static readonly ImageConverter IMAGE_CONVERTER = new ImageConverter();
-
-        private readonly KeePassTrayIconLockStateExt plugin = new KeePassTrayIconLockStateExt();
-
-        private readonly IPluginHost          keePassHost;
-        private readonly MainForm             mainWindow;
-        private readonly NotifyIcon           mainNotifyIcon;
-        private readonly ToolStripStatusLabel statusPartInfo;
-
-        private readonly TimeSpan loadDelay = TimeSpan.FromTicks(KeePassTrayIconLockStateExt.STARTUP_DURATION.Ticks * 2);
-
-        public KeePassTrayIconLockStateExtTest() {
-            Assert.True(Mock.IsProfilerEnabled, "These tests require the JustMock Profiler to be enabled because the " +
-                "MainForm class's constructor crashes if you just run it");
-
-            keePassHost    = Mock.Create<IPluginHost>();
-            mainWindow     = Mock.Create<MainForm>();
-            mainNotifyIcon = new NotifyIcon();
-
-            Control.ControlCollection mainWindowControls = Mock.Create<Control.ControlCollection>();
-            StatusStrip               statusStrip        = new StatusStrip();
-            statusPartInfo = new ToolStripStatusLabel();
-            statusStrip.Items.Add(new ToolStripStatusLabel());
-            statusStrip.Items.Add(statusPartInfo);
-            Mock.Arrange(() => mainWindowControls.OfType<StatusStrip>()).Returns(new[] { statusStrip });
-
-            Mock.Arrange(() => keePassHost.MainWindow).Returns(mainWindow);
-            Mock.Arrange(() => mainWindow.MainNotifyIcon).Returns(mainNotifyIcon);
-            Mock.Arrange(() => mainWindow.Controls).Returns(mainWindowControls);
-        }
-
-        [Fact]
-        public void startup() {
-            plugin.Initialize(keePassHost);
-
-            mainNotifyIcon.Visible.Should().BeFalse();
-            assertIconsEqual(mainNotifyIcon.Icon, Resources.locked);
-        }
-
-        [Fact]
-        public async void decrypting() {
-            plugin.Initialize(keePassHost);
-            await Task.Delay(loadDelay);
-
-            statusPartInfo.Text = "Opening database...";
-
-            mainNotifyIcon.Visible.Should().BeTrue();
-            assertIconsEqual(mainNotifyIcon.Icon, Resources.unlocking);
-        }
-
-        [Fact]
-        public async void unlocked() {
-            plugin.Initialize(keePassHost);
-            await Task.Delay(loadDelay);
-
-            Mock.Raise(() => mainWindow.FileOpened += null, new FileOpenedEventArgs(null));
-
-            mainNotifyIcon.Visible.Should().BeTrue();
-            assertIconsEqual(mainNotifyIcon.Icon, Resources.unlocked);
-        }
-
-        [Fact]
-        public async void locked() {
-            plugin.Initialize(keePassHost);
-            await Task.Delay(loadDelay);
-
-            Mock.Raise(() => mainWindow.FileOpened += null, new FileOpenedEventArgs(null));
-            Mock.Raise(() => mainWindow.FileClosed += null, new FileClosedEventArgs(null, FileEventFlags.Locking));
-
-            mainNotifyIcon.Visible.Should().BeFalse();
-            assertIconsEqual(mainNotifyIcon.Icon, Resources.locked);
-        }
-
-        internal static void assertIconsEqual(Icon actual, Icon expected) {
-            getIconBytes(actual.ToBitmap()).Should().Equal(getIconBytes(expected.ToBitmap()));
-        }
-
-        internal static void assertIconsEqual(Image actual, Icon expected) {
-            getIconBytes(actual).Should().Equal(getIconBytes(expected.ToBitmap()));
-        }
-
-        private static IEnumerable<byte>? getIconBytes(Image image) {
-            return (byte[]?) IMAGE_CONVERTER.ConvertTo(image, typeof(byte[]));
-        }
-
+    public void Dispose() {
+        KeePassTrayIconLockStateExt.invalidateExternalIconCache();
     }
+
+    [Theory]
+    [MemberData(nameof(getBuiltInIconData))]
+    internal void getBuiltInIcon(DatabaseOpenState databaseOpenState, bool isDarkTheme, Icon expected) {
+        Icon actual = KeePassTrayIconLockStateExt.getIcon(databaseOpenState, isDarkTheme);
+        actual.Should().BeImage(new Icon(expected, SystemInformation.SmallIconSize));
+    }
+
+    public static object[][] getBuiltInIconData => new[] {
+        new object[] { DatabaseOpenState.OPEN, true, Resources.unlocked },
+        new object[] { DatabaseOpenState.OPEN, false, Resources.unlocked_light },
+        new object[] { DatabaseOpenState.OPENING, true, Resources.unlocking },
+        new object[] { DatabaseOpenState.OPENING, false, Resources.unlocking_light },
+    };
+
+    [Theory]
+    [MemberData(nameof(getCustomIconData))]
+    internal void getCustomIcon(DatabaseOpenState databaseOpenState, bool isDarkTheme, string externalFilename) {
+        File.Copy("red.ico", externalFilename);
+        try {
+            Icon actual = KeePassTrayIconLockStateExt.getIcon(databaseOpenState, isDarkTheme);
+            actual.Should().BeImage(new Icon("red.ico", SystemInformation.SmallIconSize));
+        } finally {
+            File.Delete(externalFilename);
+        }
+    }
+
+    public static object[][] getCustomIconData => new[] {
+        new object[] { DatabaseOpenState.OPEN, true, "open-darktaskbar.ico" },
+        new object[] { DatabaseOpenState.OPEN, false, "open-lighttaskbar.ico" },
+        new object[] { DatabaseOpenState.OPENING, true, "opening-darktaskbar.ico" },
+        new object[] { DatabaseOpenState.OPENING, false, "opening-lighttaskbar.ico" }
+    };
 
 }

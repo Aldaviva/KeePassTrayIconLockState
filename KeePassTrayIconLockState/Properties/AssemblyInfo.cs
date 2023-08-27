@@ -21,3 +21,4 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyFileVersion("1.2.0.0")]
 
 [assembly: InternalsVisibleTo("Test")]
+[assembly: InternalsVisibleTo("Test.Elevated")]

@@ -2,7 +2,7 @@
 
 using System.Drawing;
 
-namespace KeePassTrayIconLockState; 
+namespace KeePassTrayIconLockState;
 
 internal readonly struct TrayIcon {
 
@@ -10,8 +10,8 @@ internal readonly struct TrayIcon {
     internal readonly bool isVisible;
 
     public TrayIcon(Icon image, bool isVisible) {
-        this.image       = image;
-        this.isVisible   = isVisible;
+        this.image     = image;
+        this.isVisible = isVisible;
     }
 
     public bool Equals(TrayIcon other) {

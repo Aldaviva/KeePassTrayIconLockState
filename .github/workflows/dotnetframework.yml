@@ -5,15 +5,22 @@ on:
   push:
     branches: [ master ]
 
-env:
-  PROJECT_NAME: KeePassTrayIconLockState
 
 jobs:
   build:
+    env:
+      PROJECT_NAME: KeePassTrayIconLockState
+      CORECLR_PROFILER_PATH_32: ${{ github.workspace }}\Test\Vendor\JustMock\32\Telerik.CodeWeaver.Profiler.dll
+      CORECLR_PROFILER_PATH_64: ${{ github.workspace }}\Test\Vendor\JustMock\64\Telerik.CodeWeaver.Profiler.dll
+
     runs-on: windows-latest
+
     steps:
       - name: Set up MSBuild
-        uses: microsoft/setup-msbuild@v1.1
+        uses: microsoft/setup-msbuild@v1
+
+      - name: Install KeePass
+        run: choco install KeePass
 
       - name: Clone
         uses: actions/checkout@v3
@@ -24,15 +31,43 @@ jobs:
           domain: ${{github.repository_owner}}
 
       - name: Restore
-        run: msbuild -p:Configuration=Release -t:restore -p:RestoreLockedMode=true
+        run: msbuild -p:Configuration=Release -t:restore -p:RestoreLockedMode=true -m
 
       - name: Build
-        run: msbuild -p:Configuration=Release -t:build
+        run: msbuild ${{ env.PROJECT_NAME }} -p:Configuration=Release -t:build -m
 
       - name: Test
         run: |
-          dotnet test --no-build --verbosity normal --configuration Release --collect:"XPlat Code Coverage" --settings Test/coverlet.runsettings --logger "trx;LogFileName=TestResults.xml"
-          mv Test/TestResults/*/coverage.info Test/TestResults
+          msbuild Test -p:Configuration=Debug -t:build -m
+          dotnet test Test --no-build --verbosity normal --configuration Debug --collect:"XPlat Code Coverage" --settings Test/Tests.runsettings --logger "trx;LogFileName=TestResults.xml"
+          Out-File -InputObject "TEST_EXIT_CODE=$LASTEXITCODE" -FilePath $env:GITHUB_ENV -Append -Encoding UTF8
+          Copy-Item Test/TestResults/*/coverage.info Test/TestResults -ErrorAction Continue
+          exit 0
+
+      - name: Elevated test
+        run: |
+          msbuild Test.Elevated -p:Configuration=Debug -t:build -m
+          dotnet test Test.Elevated --no-build --verbosity normal --configuration Debug --collect:"XPlat Code Coverage" --settings Test.Elevated/Tests.runsettings --logger "trx;LogFileName=TestResults.xml"
+          Out-File -InputObject "ELEVATED_TEST_EXIT_CODE=$LASTEXITCODE" -FilePath $env:GITHUB_ENV -Append -Encoding UTF8
+          Copy-Item Test.Elevated/TestResults/*/coverage.info Test.Elevated/TestResults -ErrorAction Continue
+          exit 0
+
+      - name: Upload test report
+        run: testspace */TestResults/TestResults.xml
+
+      - name: Upload coverage
+        uses: coverallsapp/github-action@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          files: Test/TestResults/coverage.info Test.Elevated/TestResults/coverage.info
+          format: lcov
+          allow-empty: true
+
+      - name: Stop if tests failed
+        run: exit $env:TEST_EXIT_CODE
+
+      - name: Stop if elevated tests failed
+        run: exit $env:ELEVATED_TEST_EXIT_CODE
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
@@ -41,11 +76,3 @@ jobs:
           path: ${{ env.PROJECT_NAME }}\bin\Release\${{ env.PROJECT_NAME }}.dll
           if-no-files-found: error
           
-      - name: Upload test report
-        run: testspace Test/TestResults/TestResults.xml
-
-      - name: Upload coverage
-        uses: coverallsapp/github-action@master
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          path-to-lcov: Test/TestResults/coverage.info

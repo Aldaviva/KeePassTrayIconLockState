@@ -102,7 +102,7 @@ public class KeePassTrayIconLockStateExt: Plugin {
         keepassIcon.Visible = iconToRender.isVisible;
     }
 
-    private static Icon getIcon(DatabaseOpenState databaseOpenState, bool isDarkTheme) {
+    internal static Icon getIcon(DatabaseOpenState databaseOpenState, bool isDarkTheme) {
         Icon iconResource = databaseOpenState switch {
             DatabaseOpenState.CLOSED when isDarkTheme  => getExternalCustomIcon("closed-darktaskbar.ico") ?? Resources.locked,
             DatabaseOpenState.CLOSED                   => getExternalCustomIcon("closed-lighttaskbar.ico") ?? Resources.locked,
@@ -118,10 +118,9 @@ public class KeePassTrayIconLockStateExt: Plugin {
     private static Icon? getExternalCustomIcon(string filename) {
         if (!EXTERNAL_ICON_CACHE.TryGetValue(filename, out Icon? icon)) {
             try {
-                string customIconPath = Path.Combine(PLUGIN_INSTALLATION_DIRECTORY, filename);
-                icon = new Icon(customIconPath, SystemInformation.SmallIconSize);
+                icon = new Icon(Path.Combine(PLUGIN_INSTALLATION_DIRECTORY, filename), SystemInformation.SmallIconSize);
             } catch (FileNotFoundException) {
-                // add a null icon to the cache map, so that missing files don't result in disk I/O every time
+                // add a null value to the map, so that missing files don't result in disk I/O every time
                 icon = null;
             }
 
@@ -129,6 +128,10 @@ public class KeePassTrayIconLockStateExt: Plugin {
         }
 
         return icon;
+    }
+
+    internal static void invalidateExternalIconCache() {
+        EXTERNAL_ICON_CACHE.Clear();
     }
 
     public override void Terminate() {
