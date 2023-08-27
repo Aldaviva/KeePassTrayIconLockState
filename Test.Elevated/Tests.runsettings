@@ -13,9 +13,9 @@
     <RunConfiguration>
         <EnvironmentVariables>
             <JUSTMOCK_INSTANCE>1</JUSTMOCK_INSTANCE>
-            <CORECLR_ENABLE_PROFILING>1</CORECLR_ENABLE_PROFILING>
-            <CORECLR_PROFILER>{B7ABE522-A68F-44F2-925B-81E7488E9EC0}</CORECLR_PROFILER>
-            <!-- CORECLR_PROFILER_PATH_32 and CORECLR_PROFILER_PATH_64 are set in the workflow file (dotnetframework.yml) because they are not constant values, they depend on other environment variables, which RunSettings files don't support -->
+            <COR_ENABLE_PROFILING>1</COR_ENABLE_PROFILING>
+            <COR_PROFILER>{B7ABE522-A68F-44F2-925B-81E7488E9EC0}</COR_PROFILER>
+            <!-- COR_PROFILER_PATH_32 and COR_PROFILER_PATH_64 are set in the workflow file (dotnetframework.yml) because they are not constant values, they depend on other environment variables, which RunSettings files don't support -->
         </EnvironmentVariables>
     </RunConfiguration>
 </RunSettings>

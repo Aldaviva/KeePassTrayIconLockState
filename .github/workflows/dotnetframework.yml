@@ -10,8 +10,8 @@ jobs:
   build:
     env:
       PROJECT_NAME: KeePassTrayIconLockState
-      CORECLR_PROFILER_PATH_32: ${{ github.workspace }}\Test\Vendor\JustMock\32\Telerik.CodeWeaver.Profiler.dll
-      CORECLR_PROFILER_PATH_64: ${{ github.workspace }}\Test\Vendor\JustMock\64\Telerik.CodeWeaver.Profiler.dll
+      COR_PROFILER_PATH_32: ${{ github.workspace }}\Test\Vendor\JustMock\32\Telerik.CodeWeaver.Profiler.dll
+      COR_PROFILER_PATH_64: ${{ github.workspace }}\Test\Vendor\JustMock\64\Telerik.CodeWeaver.Profiler.dll
 
     runs-on: windows-latest
 
@@ -53,7 +53,7 @@ jobs:
           exit 0
 
       - name: Upload test report
-        run: testspace */TestResults/TestResults.xml
+        run: testspace **/TestResults/TestResults.xml
 
       - name: Upload coverage
         uses: coverallsapp/github-action@v2

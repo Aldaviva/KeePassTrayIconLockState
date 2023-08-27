@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 [assembly: AssemblyTitle("KeePassTrayIconLockState")]
-[assembly: AssemblyDescription("Show the locked symbol in the KeePass tray icon when the password database is closed or being decrypted.")]
+[assembly: AssemblyDescription("Replace the default KeePass Windows ME–style tray icon with a wireframe padlock icon to match the style of built-in tray icons in Windows 10 and 11.")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Ben Hutchison")]
 [assembly: AssemblyProduct("KeePass Plugin")]
