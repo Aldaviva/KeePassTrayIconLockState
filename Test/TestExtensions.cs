@@ -1,6 +1,5 @@
 ﻿#nullable enable
 
-using System.Collections.Generic;
 using System.Drawing;
 using FluentAssertions;
 using FluentAssertions.Primitives;
@@ -13,11 +12,23 @@ public static class TestExtensions {
 
     private static readonly ImageConverter IMAGE_CONVERTER = new();
 
-    public static void BeImage(this ObjectAssertions objectAssertions, Icon expected) {
-        BeImage(objectAssertions, expected.ToBitmap());
+    public static void BeImage(this ObjectAssertions objectAssertions, Icon expected, string because = "", params object[] becauseArgs) {
+        BeImage(objectAssertions, expected.ToBitmap(), because, becauseArgs);
     }
 
-    public static void BeImage(this ObjectAssertions objectAssertions, Image expected) {
+    public static void NotBeImage(this ObjectAssertions objectAssertions, Icon expected, string because = "", params object[] becauseArgs) {
+        NotBeImage(objectAssertions, expected.ToBitmap(), because, becauseArgs);
+    }
+
+    public static void BeImage(this ObjectAssertions objectAssertions, Image expected, string because = "", params object[] becauseArgs) {
+        BeImage(objectAssertions, expected, true, because, becauseArgs);
+    }
+
+    public static void NotBeImage(this ObjectAssertions objectAssertions, Image expected, string because = "", params object[] becauseArgs) {
+        BeImage(objectAssertions, expected, false, because, becauseArgs);
+    }
+
+    private static void BeImage(ObjectAssertions objectAssertions, Image expected, bool shouldBeEqual = true, string because = "", params object[] becauseArgs) {
         Image? actual = objectAssertions.Subject as Image
             ?? (objectAssertions.Subject as Icon)?.ToBitmap();
 
@@ -26,7 +37,14 @@ public static class TestExtensions {
             return;
         }
 
-        getIconBytes(actual).Should().Equal(getIconBytes(expected));
+        IEnumerable<byte>? expectedBytes = getIconBytes(expected);
+        IEnumerable<byte>? actualBytes   = getIconBytes(actual);
+
+        if (shouldBeEqual) {
+            actualBytes.Should().Equal(expectedBytes, because, becauseArgs);
+        } else {
+            actualBytes.Should().NotEqual(expectedBytes, because, becauseArgs);
+        }
     }
 
     private static IEnumerable<byte>? getIconBytes(Image image) {

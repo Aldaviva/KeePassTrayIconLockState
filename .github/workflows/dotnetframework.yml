@@ -31,7 +31,7 @@ jobs:
           domain: ${{github.repository_owner}}
 
       - name: Restore
-        run: msbuild -p:Configuration=Release -t:restore -p:RestoreLockedMode=true -m
+        run: msbuild -t:restore -p:RestoreLockedMode=true -m
 
       - name: Build
         run: msbuild ${{ env.PROJECT_NAME }} -p:Configuration=Release -t:build -m

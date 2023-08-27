@@ -1,9 +1,4 @@
-﻿#nullable enable
-
-using System;
-using System.Drawing;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Drawing;
 using System.Windows.Forms;
 using FluentAssertions;
 using KeePass.Forms;
@@ -17,11 +12,10 @@ namespace Test.Elevated;
 public class KeePassTrayIconLockStateExtElevatedTest {
 
     private readonly KeePassTrayIconLockStateExt plugin = new();
-
-    private readonly IPluginHost          keePassHost;
-    private readonly MainForm             mainWindow;
-    private readonly NotifyIcon           mainNotifyIcon;
-    private readonly ToolStripStatusLabel statusPartInfo;
+    private readonly IPluginHost                 keePassHost;
+    private readonly MainForm                    mainWindow;
+    private readonly NotifyIcon                  mainNotifyIcon;
+    private readonly ToolStripStatusLabel        statusPartInfo;
 
     private readonly TimeSpan loadDelay = TimeSpan.FromTicks(KeePassTrayIconLockStateExt.STARTUP_DURATION.Ticks * 2);
 
@@ -56,9 +50,9 @@ public class KeePassTrayIconLockStateExtElevatedTest {
     }
 
     [Fact]
-    public async void decrypting() {
+    public void decrypting() {
         plugin.Initialize(keePassHost);
-        await Task.Delay(loadDelay);
+        Thread.Sleep(loadDelay); // use Thread.Sleep() instead of await Task.Delay(), which apparently never halts when run in a mocking profiler chained to a coverage profiler
 
         statusPartInfo.Text = "Opening database...";
 
@@ -67,9 +61,9 @@ public class KeePassTrayIconLockStateExtElevatedTest {
     }
 
     [Fact]
-    public async void unlocked() {
+    public void unlocked() {
         plugin.Initialize(keePassHost);
-        await Task.Delay(loadDelay);
+        Thread.Sleep(loadDelay);
 
         Mock.Raise(() => mainWindow.FileOpened += null, new FileOpenedEventArgs(null));
 
@@ -78,9 +72,9 @@ public class KeePassTrayIconLockStateExtElevatedTest {
     }
 
     [Fact]
-    public async void locked() {
+    public void locked() {
         plugin.Initialize(keePassHost);
-        await Task.Delay(loadDelay);
+        Thread.Sleep(loadDelay);
 
         Mock.Raise(() => mainWindow.FileOpened += null, new FileOpenedEventArgs(null));
         Mock.Raise(() => mainWindow.FileClosed += null, new FileClosedEventArgs(null, FileEventFlags.Locking));

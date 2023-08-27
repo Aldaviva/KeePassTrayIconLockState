@@ -19,8 +19,8 @@ namespace KeePassTrayIconLockState;
 public class KeePassTrayIconLockStateExt: Plugin {
 
     internal static readonly TimeSpan                   STARTUP_DURATION              = TimeSpan.FromMilliseconds(2000);
-    private static readonly  string                     PLUGIN_INSTALLATION_DIRECTORY = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!;
     private static readonly  IDictionary<string, Icon?> EXTERNAL_ICON_CACHE           = new Dictionary<string, Icon?>(6);
+    private static readonly  string                     PLUGIN_INSTALLATION_DIRECTORY = getPluginInstallationDirectory();
 
     private readonly StoredProperty<DatabaseOpenState> databaseOpenState = new();
     private readonly IDarkNet                          darkNet           = new DarkNet();
@@ -102,18 +102,15 @@ public class KeePassTrayIconLockStateExt: Plugin {
         keepassIcon.Visible = iconToRender.isVisible;
     }
 
-    internal static Icon getIcon(DatabaseOpenState databaseOpenState, bool isDarkTheme) {
-        Icon iconResource = databaseOpenState switch {
+    internal static Icon getIcon(DatabaseOpenState databaseOpenState, bool isDarkTheme) =>
+        new(databaseOpenState switch {
             DatabaseOpenState.CLOSED when isDarkTheme  => getExternalCustomIcon("closed-darktaskbar.ico") ?? Resources.locked,
             DatabaseOpenState.CLOSED                   => getExternalCustomIcon("closed-lighttaskbar.ico") ?? Resources.locked,
             DatabaseOpenState.OPENING when isDarkTheme => getExternalCustomIcon("opening-darktaskbar.ico") ?? Resources.unlocking,
             DatabaseOpenState.OPENING                  => getExternalCustomIcon("opening-lighttaskbar.ico") ?? Resources.unlocking_light,
             DatabaseOpenState.OPEN when isDarkTheme    => getExternalCustomIcon("open-darktaskbar.ico") ?? Resources.unlocked,
             DatabaseOpenState.OPEN                     => getExternalCustomIcon("open-lighttaskbar.ico") ?? Resources.unlocked_light
-        };
-        Icon sizedIconResource = new(iconResource, SystemInformation.SmallIconSize);
-        return sizedIconResource;
-    }
+        }, SystemInformation.SmallIconSize);
 
     private static Icon? getExternalCustomIcon(string filename) {
         if (!EXTERNAL_ICON_CACHE.TryGetValue(filename, out Icon? icon)) {
@@ -132,6 +129,24 @@ public class KeePassTrayIconLockStateExt: Plugin {
 
     internal static void invalidateExternalIconCache() {
         EXTERNAL_ICON_CACHE.Clear();
+    }
+
+    /// <summary>
+    /// <para>There are 3 different directory structures this plugin may be run within:</para>
+    /// <para>1. in KeePass: DLL is in <c>plugins</c> subdirectory, CWD is KeePass installation directory, ICOs are in same directory as DLL</para>
+    /// <para>2. in ReSharper unit tests: DLL is in <c>bin</c> subdirectory, CWD is the same, ICOs are in same directory as DLL</para>
+    /// <para>3. in VSTest (Test Explorer, dotnet test): DLL is copied to <c>temp</c> directory, CWD is in <c>bin</c> subdirectory, ICOs are in CWD instead of the directory of loaded DLL</para>
+    /// </summary>
+    /// <returns>the absolute path of the directory containing the ICO files</returns>
+    private static string getPluginInstallationDirectory() {
+        string   executingDllPath = Assembly.GetExecutingAssembly().Location;
+        string   cwdDllPath       = Path.Combine(Environment.CurrentDirectory, Path.GetFileName(executingDllPath));
+        FileInfo executingDllInfo = new(executingDllPath);
+        FileInfo cwdDllInfo       = new(cwdDllPath);
+
+        return cwdDllInfo.Exists && executingDllInfo.Length == cwdDllInfo.Length
+            ? Environment.CurrentDirectory              // test scenario
+            : Path.GetDirectoryName(executingDllPath)!; // KeePass scenario
     }
 
     public override void Terminate() {
