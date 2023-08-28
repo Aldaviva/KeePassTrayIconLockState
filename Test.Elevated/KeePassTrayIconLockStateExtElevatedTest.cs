@@ -1,11 +1,8 @@
 ﻿using System.Drawing;
 using System.Windows.Forms;
-using FluentAssertions;
 using KeePass.Forms;
 using KeePass.Plugins;
 using KeePassTrayIconLockState;
-using Telerik.JustMock;
-using Xunit;
 
 namespace Test.Elevated;
 
@@ -16,6 +13,7 @@ public class KeePassTrayIconLockStateExtElevatedTest {
     private readonly MainForm                    mainWindow;
     private readonly NotifyIcon                  mainNotifyIcon;
     private readonly ToolStripStatusLabel        statusPartInfo;
+    private readonly ToolStripProgressBar        progressBar;
 
     private readonly TimeSpan loadDelay = TimeSpan.FromTicks(KeePassTrayIconLockStateExt.STARTUP_DURATION.Ticks * 2);
 
@@ -32,8 +30,10 @@ public class KeePassTrayIconLockStateExtElevatedTest {
         statusStrip.Items.Add(new ToolStripStatusLabel());
         statusPartInfo = new ToolStripStatusLabel();
         statusStrip.Items.Add(statusPartInfo);
-        ToolStripProgressBar progressBar = new();
+        statusStrip.SetItemParent(statusPartInfo);
+        progressBar = new ToolStripProgressBar();
         statusStrip.Items.Add(progressBar);
+        statusStrip.SetItemParent(progressBar);
         Mock.Arrange(() => mainWindowControls.OfType<StatusStrip>()).Returns(new[] { statusStrip });
 
         Mock.Arrange(() => keePassHost.MainWindow).Returns(mainWindow);
@@ -81,6 +81,36 @@ public class KeePassTrayIconLockStateExtElevatedTest {
 
         mainNotifyIcon.Visible.Should().BeFalse();
         mainNotifyIcon.Icon.Should().BeImage(Resources.locked);
+    }
+
+    [Fact]
+    public void wrongPassword() {
+        plugin.Initialize(keePassHost);
+
+        progressBar.Visible = true;
+        statusPartInfo.Text = "Opening database...";
+
+        progressBar.Visible = false;
+        Thread.Sleep(200);
+
+        mainNotifyIcon.Visible.Should().BeFalse();
+        mainNotifyIcon.Icon.Should().BeImage(Resources.locked);
+    }
+
+    [Fact]
+    public void retryDecrypting() {
+        statusPartInfo.Text = "Opening database...";
+        progressBar.Visible = false;
+
+        plugin.Initialize(keePassHost);
+
+        mainNotifyIcon.Visible.Should().BeFalse();
+        mainNotifyIcon.Icon.Should().BeImage(Resources.locked);
+
+        progressBar.Visible = true;
+
+        mainNotifyIcon.Visible.Should().BeTrue();
+        mainNotifyIcon.Icon.Should().BeImage(new Icon(Resources.unlocking, SystemInformation.SmallIconSize));
     }
 
 }

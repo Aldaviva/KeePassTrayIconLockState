@@ -1,7 +1,7 @@
 ﻿#nullable enable
 
 using System.Drawing;
-using FluentAssertions;
+using System.Windows.Forms;
 using FluentAssertions.Primitives;
 
 // ReSharper disable InconsistentNaming - extension methods
@@ -49,6 +49,19 @@ public static class TestExtensions {
 
     private static IEnumerable<byte>? getIconBytes(Image image) {
         return (byte[]?) IMAGE_CONVERTER.ConvertTo(image, typeof(byte[]));
+    }
+
+    public static void SetItemParent(this ToolStrip toolStrip, ToolStripItem item) {
+        ToolStripHelper.setItemParent(item, toolStrip);
+    }
+
+    private class ToolStripHelper: ToolStrip {
+
+        public ToolStripHelper() { }
+        public ToolStripHelper(params ToolStripItem[] items): base(items) { }
+
+        public static void setItemParent(ToolStripItem item, ToolStrip parent) => SetItemParent(item, parent);
+
     }
 
 }

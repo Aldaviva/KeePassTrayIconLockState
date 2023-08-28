@@ -1,11 +1,8 @@
 ﻿#nullable enable
 
 using System.Diagnostics;
-using System.IO;
-using FluentAssertions;
 using KeePass.Plugins;
 using KeePassTrayIconLockState;
-using Xunit;
 
 namespace Test;
 
@@ -45,6 +42,11 @@ public class PluginTest {
     [Fact]
     public void pluginIcon() {
         plugin.SmallIcon.Should().BeImage(Resources.plugin_image);
+    }
+
+    [Fact]
+    public void updateUrl() {
+        plugin.UpdateUrl.Should().Be("https://raw.githubusercontent.com/Aldaviva/KeePassTrayIconLockState/master/KeePassTrayIconLockState/version.txt");
     }
 
 }

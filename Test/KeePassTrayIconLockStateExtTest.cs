@@ -1,8 +1,6 @@
 ﻿using System.Drawing;
 using System.Windows.Forms;
-using FluentAssertions;
 using KeePassTrayIconLockState;
-using Xunit;
 
 namespace Test;
 
@@ -20,6 +18,8 @@ public class KeePassTrayIconLockStateExtTest: IDisposable {
         new object[] { DatabaseOpenState.OPEN, false, Resources.unlocked_light },
         new object[] { DatabaseOpenState.OPENING, true, Resources.unlocking },
         new object[] { DatabaseOpenState.OPENING, false, Resources.unlocking_light },
+        new object[] { DatabaseOpenState.CLOSED, true, Resources.locked },
+        new object[] { DatabaseOpenState.CLOSED, false, Resources.locked }
     };
 
     [Theory]
@@ -39,8 +39,16 @@ public class KeePassTrayIconLockStateExtTest: IDisposable {
         new object[] { DatabaseOpenState.OPEN, true, "open-darktaskbar.ico", Resources.unlocked },
         new object[] { DatabaseOpenState.OPEN, false, "open-lighttaskbar.ico", Resources.unlocked_light },
         new object[] { DatabaseOpenState.OPENING, true, "opening-darktaskbar.ico", Resources.unlocking },
-        new object[] { DatabaseOpenState.OPENING, false, "opening-lighttaskbar.ico", Resources.unlocking_light }
+        new object[] { DatabaseOpenState.OPENING, false, "opening-lighttaskbar.ico", Resources.unlocking_light },
+        new object[] { DatabaseOpenState.CLOSED, true, "closed-darktaskbar.ico", Resources.locked },
+        new object[] { DatabaseOpenState.CLOSED, false, "closed-lighttaskbar.ico", Resources.locked }
     };
+
+    [Fact]
+    public void disposal() {
+        KeePassTrayIconLockStateExt extension = new();
+        extension.Terminate();
+    }
 
     public void Dispose() {
         KeePassTrayIconLockStateExt.invalidateExternalIconCache();

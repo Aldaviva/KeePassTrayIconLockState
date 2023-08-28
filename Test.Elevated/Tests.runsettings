@@ -8,6 +8,7 @@
 
                     <!-- Syntax: https://github.com/coverlet-coverage/coverlet/blob/master/Documentation/MSBuildIntegration.md#filters -->
                     <Exclude>[Test*]*</Exclude>
+                    <ExcludeByFile>**/*.Designer.cs</ExcludeByFile>
                 </Configuration>
             </DataCollector>
         </DataCollectors>
