@@ -1,0 +1,50 @@
+﻿{
+	"weavingFilter": {
+		"defaultAction": "exclude",
+		"entries": [
+			{
+				"scope": "module",
+				"pattern": "System\.Windows\.Forms",
+				"action": "exclude",
+				"supplements": [
+					{
+						"scope": "type",
+						"pattern": "System\.Windows\.Forms\.Control",
+						"action": "exclude",
+						"supplements": [
+							{
+								"scope": "member",
+								"pattern": "Controls",
+								"action": "include"
+							}
+						]
+					},
+					{
+						"scope": "type",
+						"pattern": "System\.Windows\.Forms\.Control\.ControlCollection",
+						"action": "exclude",
+						"supplements": [
+							{
+								"scope": "member",
+								"pattern": "OfType.*",
+								"action": "include"
+							}
+						]
+					}
+				]
+			},
+			{
+				"scope": "module",
+				"pattern": "KeePass",
+				"action": "exclude",
+				"supplements": [
+					{
+						"scope": "type",
+						"pattern": "KeePass\.Forms\.MainForm",
+						"action": "include"
+					}
+				]
+			}
+		]
+	}
+}

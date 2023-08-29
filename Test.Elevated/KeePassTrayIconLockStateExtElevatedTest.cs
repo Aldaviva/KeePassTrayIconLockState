@@ -15,8 +15,6 @@ public class KeePassTrayIconLockStateExtElevatedTest {
     private readonly ToolStripStatusLabel        statusPartInfo;
     private readonly ToolStripProgressBar        progressBar;
 
-    private readonly TimeSpan loadDelay = TimeSpan.FromTicks(KeePassTrayIconLockStateExt.STARTUP_DURATION.Ticks * 2);
-
     public KeePassTrayIconLockStateExtElevatedTest() {
         Assert.True(Mock.IsProfilerEnabled, "These tests require the JustMock Profiler to be enabled because the " +
             "MainForm class's constructor crashes if you just run it");
