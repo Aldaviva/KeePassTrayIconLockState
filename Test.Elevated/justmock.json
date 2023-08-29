@@ -1,32 +1,51 @@
 ﻿{
+	"$instructions": [
+		"Make JustMock run about 100% faster by not instrumenting every single method that ever executes.",
+		"In CI, this file is enabled by dotnetframework.yml setting the JUSTMOCK_CONFIG_PATH environment variable.",
+		"In development, you should enable this by setting the JUSTMOCK_CONFIG_PATH environment variable to the absolute path of this file using ReSharper > Options > Tools > Unit Testing > Test Runner > Environment variables.",
+		"To figure out why tests are failing with this file enabled, download SysInternals DebugView, set its filter to include JustMockProfiler, turn on Capture Events, and use ReSharper to set the JUSTMOCK_LOG_LEVEL environment variable to DEBUG (delete it or set it to OFF when you're done, for performance).",
+		"In general, you must specify a complete module+type+member supplement chain or JustMock will ignore your filter.",
+		"JustMock's filtering syntax is fucking poorly designed, and the documentation is misleading. You mostly have to search the DebugView logs as you run tests, trying to figure out what methods your code is calling, and looking at where NullReferenceExceptions are thrown from.",
+
+		"https://docs.telerik.com/devtools/justmock/advanced-usage/profiler-weaving-optimizations",
+		"https://docs.telerik.com/devtools/justmock/advanced-usage/profiler-log-and-trace"
+	],
+
 	"weavingFilter": {
 		"defaultAction": "exclude",
 		"entries": [
 			{
 				"scope": "module",
-				"pattern": "System\.Windows\.Forms",
-				"action": "exclude",
+				"pattern": "System\\.Windows\\.Forms",
+				"action": "include",
 				"supplements": [
 					{
 						"scope": "type",
-						"pattern": "System\.Windows\.Forms\.Control",
-						"action": "exclude",
+						"pattern": ".*",
+						"action": "include",
 						"supplements": [
 							{
 								"scope": "member",
-								"pattern": "Controls",
+								"pattern": ".*",
 								"action": "include"
 							}
 						]
-					},
+					}
+				]
+			},
+			{
+				"scope": "module",
+				"pattern": "System\\.Core",
+				"action": "include",
+				"supplements": [
 					{
 						"scope": "type",
-						"pattern": "System\.Windows\.Forms\.Control\.ControlCollection",
-						"action": "exclude",
+						"pattern": "System\\.Linq\\.Enumerable",
+						"action": "include",
 						"supplements": [
 							{
 								"scope": "member",
-								"pattern": "OfType.*",
+								"pattern": "OfType",
 								"action": "include"
 							}
 						]
@@ -36,12 +55,19 @@
 			{
 				"scope": "module",
 				"pattern": "KeePass",
-				"action": "exclude",
+				"action": "include",
 				"supplements": [
 					{
 						"scope": "type",
-						"pattern": "KeePass\.Forms\.MainForm",
-						"action": "include"
+						"pattern": ".*",
+						"action": "include",
+						"supplements": [
+							{
+								"scope": "member",
+								"pattern": ".*",
+								"action": "include"
+							}
+						]
 					}
 				]
 			}
