@@ -17,8 +17,8 @@ using System.Runtime.InteropServices;
 
 // Remember to also update version.txt when changing these version attributes so that online update checking works.
 // https://keepass.info/help/v2_dev/plg_index.html#upd
-[assembly: AssemblyVersion("1.2.1.0")]
-[assembly: AssemblyFileVersion("1.2.1.0")]
+[assembly: AssemblyVersion("1.3.0.0")]
+[assembly: AssemblyFileVersion("1.3.0.0")]
 
 [assembly: InternalsVisibleTo("Test")]
 [assembly: InternalsVisibleTo("Test.Elevated")]

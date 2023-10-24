@@ -5,9 +5,9 @@ VisualStudioVersion = 17.7.34018.315
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KeePassTrayIconLockState", "KeePassTrayIconLockState\KeePassTrayIconLockState.csproj", "{E980ABDC-E56D-4E9C-A322-AFBE9D9092B4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.Elevated", "Test.Elevated\Test.Elevated.csproj", "{F190E2D7-A3FE-4DE8-8CB0-339F41C4F599}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test.Elevated", "Test.Elevated\Test.Elevated.csproj", "{F190E2D7-A3FE-4DE8-8CB0-339F41C4F599}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test", "Test\Test.csproj", "{7A2AA320-04B9-4A1F-88BA-225849CCEE5A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test", "Test\Test.csproj", "{7A2AA320-04B9-4A1F-88BA-225849CCEE5A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

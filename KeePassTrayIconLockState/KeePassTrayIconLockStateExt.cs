@@ -1,5 +1,11 @@
 ﻿#nullable enable
 
+using Dark.Net;
+using HarmonyLib;
+using KeePass.Forms;
+using KeePass.Plugins;
+using KeePass.Resources;
+using KoKo.Property;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -8,10 +14,6 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using Dark.Net;
-using KeePass.Plugins;
-using KeePass.Resources;
-using KoKo.Property;
 
 namespace KeePassTrayIconLockState;
 
@@ -19,8 +21,11 @@ namespace KeePassTrayIconLockState;
 public class KeePassTrayIconLockStateExt: Plugin {
 
     internal static readonly TimeSpan                   STARTUP_DURATION              = TimeSpan.FromMilliseconds(2000);
+    private static readonly  TimeSpan                   FIXUP_INTERVAL                = TimeSpan.FromSeconds(15);
     private static readonly  IDictionary<string, Icon?> EXTERNAL_ICON_CACHE           = new Dictionary<string, Icon?>(6);
     private static readonly  string                     PLUGIN_INSTALLATION_DIRECTORY = getPluginInstallationDirectory();
+
+    private static KeePassTrayIconLockStateExt instance = null!;
 
     private readonly StoredProperty<DatabaseOpenState> databaseOpenState = new();
     private readonly IDarkNet                          darkNet           = new DarkNet();
@@ -33,6 +38,7 @@ public class KeePassTrayIconLockStateExt: Plugin {
     public override string UpdateUrl { get; } = @"https://raw.githubusercontent.com/Aldaviva/KeePassTrayIconLockState/master/KeePassTrayIconLockState/version.txt";
 
     public override bool Initialize(IPluginHost host) {
+        instance    = this;
         keePassHost = host;
 
         keePassHost.MainWindow.FileOpened += delegate { databaseOpenState.Value = DatabaseOpenState.OPEN; };
@@ -57,7 +63,7 @@ public class KeePassTrayIconLockStateExt: Plugin {
             if (!args.NewValue && databaseOpenState.Value == DatabaseOpenState.OPENING) {
                 /*
                  * When the database is being opened and the progress bar gets hidden, it means the database was finished being decrypted, but was it successful or unsuccessful?
-                 * Sadly there is no good way to tell, so instead we wait 100 ms for the FileOpen event to be fired.
+                 * Sadly there is no good way to tell, so instead we wait 100 ms for the FileOpened event to be fired.
                  * If it is fired, the db open state moves from OPENING to OPEN (above).
                  * Otherwise, assume that the database failed to decrypt and set the db open state to CLOSED.
                  */
@@ -83,13 +89,9 @@ public class KeePassTrayIconLockStateExt: Plugin {
 
         trayIcon.PropertyChanged += delegate { renderTrayIcon(); };
 
-        /*
-         * KeePass sets its own icon at some indeterminate time after startup, so repeatedly set our own icon every 8 ms for 2 seconds to make sure our icon isn't overridden.
-         */
-        Timer startupTimer = new() { Enabled = true, Interval = 8 };
-        startupTimer.Tick += delegate { renderTrayIcon(); };
-        Task.Delay(STARTUP_DURATION).ContinueWith(_ => startupTimer.Dispose());
         renderTrayIcon();
+
+        hookKeepassTrayIconUpdates();
 
         return true;
     }
@@ -147,6 +149,25 @@ public class KeePassTrayIconLockStateExt: Plugin {
         return cwdDllInfo.Exists && executingDllInfo.Length == cwdDllInfo.Length
             ? Environment.CurrentDirectory              // test scenario
             : Path.GetDirectoryName(executingDllPath)!; // KeePass scenario
+    }
+
+    /// <summary>
+    /// Use Harmony to modify the bytecode of KeePass' MainForm.UpdateTrayIcon(bool) method to call our own tray icon rendering method.
+    /// I do this because KeePass sometimes renders its tray icon without exposing any events to indicate that it's doing so, therefore I can't receive any notifications to trigger my own icon to render. Two examples of this are clicking OK in the Options dialog box and canceling the Unlock Database dialog box when minimize to tray, minimize after locking, and minimize after opening are all enabled.
+    /// Also, all of the types in KeePass are static, private, sealed, and don't implement interfaces, so there is no other way to receive notifications that it has rendered its tray icon.
+    /// </summary>
+    private static void hookKeepassTrayIconUpdates() {
+        Harmony harmony = new("com.aldaviva.keepasstrayiconlockstate");
+
+        MethodInfo originalUpdateTrayIconMethod = AccessTools.Method(typeof(MainForm), "UpdateTrayIcon", new[] { typeof(bool) }) ??
+            throw new MissingMethodException("Cannot find MainForm.UpdateTrayIcon(bool) method");
+
+        harmony.Patch(originalUpdateTrayIconMethod, postfix: new HarmonyMethod(AccessTools.Method(typeof(KeePassTrayIconLockStateExt), nameof(onUpdateTrayIcon))));
+    }
+
+    // ReSharper disable once UnusedMember.Local
+    private static void onUpdateTrayIcon() {
+        instance.renderTrayIcon();
     }
 
     public override void Terminate() {
