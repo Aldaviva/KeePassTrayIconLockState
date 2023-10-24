@@ -1,8 +1,10 @@
-﻿using System.Drawing;
-using System.Windows.Forms;
+﻿using KeePass.App;
 using KeePass.Forms;
 using KeePass.Plugins;
+using KeePass.UI;
 using KeePassTrayIconLockState;
+using System.Drawing;
+using System.Windows.Forms;
 
 namespace Test.Elevated;
 
@@ -109,6 +111,18 @@ public class KeePassTrayIconLockStateExtElevatedTest {
 
         mainNotifyIcon.Visible.Should().BeTrue();
         mainNotifyIcon.Icon.Should().BeImage(new Icon(Resources.unlocking, SystemInformation.SmallIconSize));
+    }
+
+    [Fact]
+    public void keepassUpdateTrayIconHookedCallback() {
+        plugin.Initialize(keePassHost);
+        mainNotifyIcon.Icon    = AppIcons.Get(AppIconType.QuadNormal, UIUtil.GetSmallIconSize(), Color.Empty);
+        mainNotifyIcon.Visible = true;
+
+        KeePassTrayIconLockStateExt.onKeepassRenderedTrayIcon();
+
+        mainNotifyIcon.Visible.Should().BeFalse();
+        mainNotifyIcon.Icon.Should().BeImage(Resources.locked);
     }
 
 }

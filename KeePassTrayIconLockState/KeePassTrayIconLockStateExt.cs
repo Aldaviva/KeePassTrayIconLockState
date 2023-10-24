@@ -20,12 +20,10 @@ namespace KeePassTrayIconLockState;
 // ReSharper disable once UnusedType.Global
 public class KeePassTrayIconLockStateExt: Plugin {
 
-    internal static readonly TimeSpan                   STARTUP_DURATION              = TimeSpan.FromMilliseconds(2000);
-    private static readonly  TimeSpan                   FIXUP_INTERVAL                = TimeSpan.FromSeconds(15);
-    private static readonly  IDictionary<string, Icon?> EXTERNAL_ICON_CACHE           = new Dictionary<string, Icon?>(6);
-    private static readonly  string                     PLUGIN_INSTALLATION_DIRECTORY = getPluginInstallationDirectory();
+    private static readonly IDictionary<string, Icon?> EXTERNAL_ICON_CACHE           = new Dictionary<string, Icon?>(6);
+    private static readonly string                     PLUGIN_INSTALLATION_DIRECTORY = getPluginInstallationDirectory();
 
-    private static KeePassTrayIconLockStateExt instance = null!;
+    private static event Action? keepassRenderedTrayIcon;
 
     private readonly StoredProperty<DatabaseOpenState> databaseOpenState = new();
     private readonly IDarkNet                          darkNet           = new DarkNet();
@@ -38,7 +36,6 @@ public class KeePassTrayIconLockStateExt: Plugin {
     public override string UpdateUrl { get; } = @"https://raw.githubusercontent.com/Aldaviva/KeePassTrayIconLockState/master/KeePassTrayIconLockState/version.txt";
 
     public override bool Initialize(IPluginHost host) {
-        instance    = this;
         keePassHost = host;
 
         keePassHost.MainWindow.FileOpened += delegate { databaseOpenState.Value = DatabaseOpenState.OPEN; };
@@ -92,6 +89,7 @@ public class KeePassTrayIconLockStateExt: Plugin {
         renderTrayIcon();
 
         hookKeepassTrayIconUpdates();
+        keepassRenderedTrayIcon += renderTrayIcon;
 
         return true;
     }
@@ -153,6 +151,7 @@ public class KeePassTrayIconLockStateExt: Plugin {
 
     /// <summary>
     /// Use Harmony to modify the bytecode of KeePass' MainForm.UpdateTrayIcon(bool) method to call our own tray icon rendering method.
+    /// This prevents KeePass' built-in icons from wrongly replacing my icons.
     /// I do this because KeePass sometimes renders its tray icon without exposing any events to indicate that it's doing so, therefore I can't receive any notifications to trigger my own icon to render. Two examples of this are clicking OK in the Options dialog box and canceling the Unlock Database dialog box when minimize to tray, minimize after locking, and minimize after opening are all enabled.
     /// Also, all of the types in KeePass are static, private, sealed, and don't implement interfaces, so there is no other way to receive notifications that it has rendered its tray icon.
     /// </summary>
@@ -160,17 +159,19 @@ public class KeePassTrayIconLockStateExt: Plugin {
         Harmony harmony = new("com.aldaviva.keepasstrayiconlockstate");
 
         MethodInfo originalUpdateTrayIconMethod = AccessTools.Method(typeof(MainForm), "UpdateTrayIcon", new[] { typeof(bool) }) ??
-            throw new MissingMethodException("Cannot find MainForm.UpdateTrayIcon(bool) method");
+            throw new MissingMethodException("Cannot find KeePass.Forms.MainForm.UpdateTrayIcon(bool) method");
 
-        harmony.Patch(originalUpdateTrayIconMethod, postfix: new HarmonyMethod(AccessTools.Method(typeof(KeePassTrayIconLockStateExt), nameof(onUpdateTrayIcon))));
+        HarmonyMethod onAfterUpdateTrayIcon = new(AccessTools.Method(typeof(KeePassTrayIconLockStateExt), nameof(onKeepassRenderedTrayIcon)));
+
+        harmony.Patch(originalUpdateTrayIconMethod, postfix: onAfterUpdateTrayIcon);
     }
 
-    // ReSharper disable once UnusedMember.Local
-    private static void onUpdateTrayIcon() {
-        instance.renderTrayIcon();
+    internal static void onKeepassRenderedTrayIcon() {
+        keepassRenderedTrayIcon?.Invoke();
     }
 
     public override void Terminate() {
+        keepassRenderedTrayIcon -= renderTrayIcon;
         darkNet.Dispose();
         base.Terminate();
     }
