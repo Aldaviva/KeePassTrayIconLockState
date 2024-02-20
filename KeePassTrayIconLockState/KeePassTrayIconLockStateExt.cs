@@ -27,6 +27,7 @@ public class KeePassTrayIconLockStateExt: Plugin {
 
     private readonly StoredProperty<DatabaseOpenState> databaseOpenState = new();
     private readonly IDarkNet                          darkNet           = new DarkNet();
+    private readonly Harmony                           harmony           = new("com.aldaviva.keepasstrayiconlockstate");
 
     private IPluginHost        keePassHost        = null!;
     private Property<TrayIcon> trayIcon           = null!;
@@ -90,6 +91,8 @@ public class KeePassTrayIconLockStateExt: Plugin {
 
         hookKeepassTrayIconUpdates();
         keepassRenderedTrayIcon += renderTrayIcon;
+
+        Fixes.Fixes.fixAll(keePassHost, harmony);
 
         return true;
     }
@@ -155,13 +158,11 @@ public class KeePassTrayIconLockStateExt: Plugin {
     /// I do this because KeePass sometimes renders its tray icon without exposing any events to indicate that it's doing so, therefore I can't receive any notifications to trigger my own icon to render. Two examples of this are clicking OK in the Options dialog box and canceling the Unlock Database dialog box when minimize to tray, minimize after locking, and minimize after opening are all enabled.
     /// Also, all of the types in KeePass are static, private, sealed, and don't implement interfaces, so there is no other way to receive notifications that it has rendered its tray icon.
     /// </summary>
-    private static void hookKeepassTrayIconUpdates() {
-        Harmony harmony = new("com.aldaviva.keepasstrayiconlockstate");
-
-        MethodInfo originalUpdateTrayIconMethod = AccessTools.Method(typeof(MainForm), "UpdateTrayIcon", new[] { typeof(bool) }) ??
+    private void hookKeepassTrayIconUpdates() {
+        MethodInfo originalUpdateTrayIconMethod = AccessTools.Method(typeof(MainForm), "UpdateTrayIcon", [typeof(bool)]) ??
             throw new MissingMethodException("Cannot find KeePass.Forms.MainForm.UpdateTrayIcon(bool) method");
 
-        HarmonyMethod onAfterUpdateTrayIcon = new(AccessTools.Method(typeof(KeePassTrayIconLockStateExt), nameof(onKeepassRenderedTrayIcon)));
+        HarmonyMethod onAfterUpdateTrayIcon = new(SymbolExtensions.GetMethodInfo(() => onKeepassRenderedTrayIcon()));
 
         harmony.Patch(originalUpdateTrayIconMethod, postfix: onAfterUpdateTrayIcon);
     }

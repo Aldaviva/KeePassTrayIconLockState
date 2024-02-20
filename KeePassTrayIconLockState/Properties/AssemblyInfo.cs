@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Ben Hutchison")]
 [assembly: AssemblyProduct("KeePass Plugin")]
-[assembly: AssemblyCopyright("© 2023 Ben Hutchison")]
+[assembly: AssemblyCopyright("© 2024 Ben Hutchison")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -17,8 +17,8 @@ using System.Runtime.InteropServices;
 
 // Remember to also update version.txt when changing these version attributes so that online update checking works.
 // https://keepass.info/help/v2_dev/plg_index.html#upd
-[assembly: AssemblyVersion("1.3.0.0")]
-[assembly: AssemblyFileVersion("1.3.0.0")]
+[assembly: AssemblyVersion("1.4.0.0")]
+[assembly: AssemblyFileVersion("1.4.0.0")]
 
 [assembly: InternalsVisibleTo("Test")]
 [assembly: InternalsVisibleTo("Test.Elevated")]
